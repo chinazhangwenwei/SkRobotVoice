@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">TestAsr</string>
+    <string-array name="asr_platform">
+        <item>科大讯飞</item>
+        <item>捷通华声</item>
+    </string-array>
+</resources>

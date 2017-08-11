@@ -9,6 +9,11 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/baiduasrlibrary" />
+            <option value="$PROJECT_DIR$/skasr" />
+            <option value="$PROJECT_DIR$/sktts" />
+            <option value="$PROJECT_DIR$/skvoicelib" />
+            <option value="$PROJECT_DIR$/testasr" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

@@ -4,6 +4,11 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/SKRobotVoiceDemo.iml" filepath="$PROJECT_DIR$/SKRobotVoiceDemo.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/baiduasrlibrary/baiduasrlibrary.iml" filepath="$PROJECT_DIR$/baiduasrlibrary/baiduasrlibrary.iml" />
+      <module fileurl="file://$PROJECT_DIR$/skasr/skasr.iml" filepath="$PROJECT_DIR$/skasr/skasr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sktts/sktts.iml" filepath="$PROJECT_DIR$/sktts/sktts.iml" />
+      <module fileurl="file://$PROJECT_DIR$/skvoicelib/skvoicelib.iml" filepath="$PROJECT_DIR$/skvoicelib/skvoicelib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/testasr/testasr.iml" filepath="$PROJECT_DIR$/testasr/testasr.iml" />
     </modules>
   </component>
 </project>
