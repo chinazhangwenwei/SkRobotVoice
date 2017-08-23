@@ -4,13 +4,16 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.text.TextUtils;
 
 import com.baidu.tts.auth.AuthInfo;
 import com.baidu.tts.client.SpeechError;
 import com.baidu.tts.client.SpeechSynthesizer;
 import com.baidu.tts.client.SpeechSynthesizerListener;
+import com.baidu.tts.client.SynthesizerTool;
 import com.baidu.tts.client.TtsMode;
 import com.interjoy.sktts.interfaces.TtsProvider;
+import com.interjoy.sktts.util.LogUtil;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,7 +38,7 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
     private static final String PLAT_DES = "百度";//平台名称
     private SpeechSynthesizer mSpeechSynthesizer;
     private String mSampleDirPath;
-    private static final String SAMPLE_DIR_NAME = "baiduTTS";
+    private static final String SAMPLE_DIR_NAME = "BaiduTTS";
     private static final String SPEECH_FEMALE_MODEL_NAME = "bd_etts_speech_female.dat";
     private static final String SPEECH_MALE_MODEL_NAME = "bd_etts_speech_male.dat";
     private static final String TEXT_MODEL_NAME = "bd_etts_text.dat";
@@ -48,30 +51,55 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
      * 3(情感男声<度逍遥>)
      * 4(情感儿童声<度丫丫>)
      */
-    private String speaker = "1";
-    public static String API_KEY = "VShBu32tOmOmcwPK4jTd05oP";
-    public static String APP_ID = "9924961";
-    public static String SECRET_KEY = "95d9e8eab593bdf54e9e5efd92d58937";
+    private String speaker = "0";
+    public static String apiKey = "VShBu32tOmOmcwPK4jTd05oP";
+    public static String appId = "9924961";
+    public static String secretKey = "95d9e8eab593bdf54e9e5efd92d58937";
+    private String tempApiKey = null;
+    private String tempAppId = null;
+    private String tempSecretKey = null;
+
+    //修改成功后保存平台信息的key值
+    public static String KEY_BAI_DU_API = "KEY_BAI_DU_API";
+    public static String KEY_BAI_DU_ID = "KEY_BAI_DU_ID";
+    public static String KEY_BAI_DU_SECRET = "KEY_BAI_DU_SECRET";
+
+    //修改平台时候的临时key值
+    public static String KEY_TEMP_BAI_DU_API = "KEY_TEMP_BAI_DU_API";
+    public static String KEY_TEMP_BAI_DU_ID = "KEY_TEMP_BAI_DU_ID";
+    public static String KEY_TEMP_BAI_DU_SECRET = "KEY_TEMP_BAI_DU_SECRET";
+
+//    App ID: 10007892
+//
+//    API Key: DDSTkGS6yIZL4GvXlbETquHj
+//
+//    Secret Key: 4526eee4fb680d973820ef8651fa7912
 
     public static String TTS_SP_B_SPEAKER_KEY = "TTS_SP_SPEAKER_BAIDU";
 
+    private SpeakerResultListener speakResult;
+    private InitResultListener initResultListener;
+    private static final String TAG = "BaiduTtsImpl";
+    private boolean isSpeaking = false;
+
 
     @Override
-    public void init(Context mContext, InitResultListener initResultListener) {
+    public void init(Context mContext) {
         initialEnv(mContext);
-        initialTts(mContext, initResultListener);
+        initialTts(mContext);
 
     }
 
     private void initialEnv(Context mContext) {
         if (mSampleDirPath == null) {
             String sdcardPath = Environment.getExternalStorageDirectory().toString();
-            mSampleDirPath = sdcardPath + "/" + SAMPLE_DIR_NAME;
+            mSampleDirPath = sdcardPath + File.separator + SAMPLE_DIR_NAME;
+
         }
         makeDir(mSampleDirPath);
-        copyFromAssetsToSdcard(mContext, false, SPEECH_FEMALE_MODEL_NAME, mSampleDirPath + "/" + SPEECH_FEMALE_MODEL_NAME);
-        copyFromAssetsToSdcard(mContext, false, SPEECH_MALE_MODEL_NAME, mSampleDirPath + "/" + SPEECH_MALE_MODEL_NAME);
-        copyFromAssetsToSdcard(mContext, false, TEXT_MODEL_NAME, mSampleDirPath + "/" + TEXT_MODEL_NAME);
+        copyFromAssetsToSdcard(mContext, false, SPEECH_FEMALE_MODEL_NAME, mSampleDirPath + File.separator + SPEECH_FEMALE_MODEL_NAME);
+        copyFromAssetsToSdcard(mContext, false, SPEECH_MALE_MODEL_NAME, mSampleDirPath + File.separator + SPEECH_MALE_MODEL_NAME);
+        copyFromAssetsToSdcard(mContext, false, TEXT_MODEL_NAME, mSampleDirPath + File.separator + TEXT_MODEL_NAME);
     }
 
     //创建文件夹
@@ -126,10 +154,33 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
         }
     }
 
-    private void initialTts(Context mContext, InitResultListener initResultListener) {
-        SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
+    private void initialTts(Context mContext) {
+        final SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                 Activity.MODE_PRIVATE);
         speaker = sharedPreferences.getString(TTS_SP_B_SPEAKER_KEY, speaker);
+        tempAppId = sharedPreferences.getString(KEY_TEMP_BAI_DU_ID, "");
+        tempSecretKey = sharedPreferences.getString(KEY_TEMP_BAI_DU_SECRET, "");
+        tempApiKey = sharedPreferences.getString(KEY_TEMP_BAI_DU_API, "");
+        if (TextUtils.isEmpty(tempAppId) || TextUtils.isEmpty(tempApiKey)
+                || TextUtils.isEmpty(tempSecretKey)) {
+            //切换平台信息不完整，走正确初始化流程
+            LogUtil.d(TAG, "切换平台信息不完整，走正确初始化流程");
+            tempAppId = null;
+            tempSecretKey = null;
+            tempApiKey = null;
+            appId = sharedPreferences.getString(KEY_BAI_DU_ID, appId);
+            apiKey = sharedPreferences.getString(KEY_BAI_DU_API, apiKey);
+            secretKey = sharedPreferences.getString(KEY_BAI_DU_SECRET, secretKey);
+        } else {
+            //切换平台信息完整，走切换逻辑
+            LogUtil.d(TAG, "切换平台信息完整，走切换逻辑");
+            appId = tempAppId;
+            apiKey = tempApiKey;
+            secretKey = tempSecretKey;
+            sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_ID, "").apply();
+            sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_SECRET, "").apply();
+            sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_API, "").apply();
+        }
         mSpeechSynthesizer = SpeechSynthesizer.getInstance();
         mSpeechSynthesizer.setContext(mContext);
         mSpeechSynthesizer.setSpeechSynthesizerListener(this);
@@ -144,10 +195,10 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 //         mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_TTS_LICENCE_FILE, mSampleDirPath + "/"
 //                + LICENSE_FILE_NAME);
         // 请替换为语音开发者平台上注册应用得到的App ID (离线授权)
-        mSpeechSynthesizer.setAppId(APP_ID/*这里只是为了让Demo运行使用的APPID,请替换成自己的id。*/);
+        mSpeechSynthesizer.setAppId(appId/*这里只是为了让Demo运行使用的APPID,请替换成自己的id。*/);
         // 请替换为语音开发者平台注册应用得到的apikey和secretkey (在线授权)
-        mSpeechSynthesizer.setApiKey(API_KEY,
-                SECRET_KEY/*这里只是为了让Demo正常运行使用APIKey,请替换成自己的APIKey*/);
+        mSpeechSynthesizer.setApiKey(apiKey,
+                secretKey/*这里只是为了让Demo正常运行使用APIKey,请替换成自己的APIKey*/);
         // 发音人（在线引擎），可用参数为0,1,2,3。。。（服务器端会动态增加，各值含义参考文档，以文档说明为准。0--普通女声，1--普通男声，2--特别男声，3--情感男声。。。）
         mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEAKER, speaker);
         // 设置Mix模式的合成策略
@@ -158,6 +209,15 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 
 
         if (authInfo.isSuccess()) {
+            LogUtil.d(TAG, "initSuccess" + appId);
+            if (!TextUtils.isEmpty(tempAppId)) {
+                sharedPreferences.edit().putString(KEY_BAI_DU_API, tempApiKey).apply();
+                sharedPreferences.edit().putString(KEY_BAI_DU_ID, tempAppId).apply();
+                sharedPreferences.edit().putString(KEY_BAI_DU_SECRET, tempSecretKey).apply();
+                tempApiKey = null;
+                tempAppId = null;
+                tempSecretKey = null;
+            }
             if (initResultListener != null) {
                 initResultListener.initSuccess();
             }
@@ -175,13 +235,30 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 //        int result =
 //                mSpeechSynthesizer.loadEnglishModel(mSampleDirPath + "/" + ENGLISH_TEXT_MODEL_NAME, mSampleDirPath
 //                        + "/" + ENGLISH_SPEECH_FEMALE_MODEL_NAME);
+        printEngineInfo();
+    }
+
+    private void printEngineInfo() {
+        LogUtil.d(TAG, "EngineVersioin=" + SynthesizerTool.getEngineVersion());
+        LogUtil.d(TAG, "EngineInfo=" + SynthesizerTool.getEngineInfo());
+        String textModelInfo = SynthesizerTool.getModelInfo(mSampleDirPath + "/" + TEXT_MODEL_NAME);
+        LogUtil.d(TAG, "textModelInfo=" + textModelInfo);
+        String speechModelInfo = SynthesizerTool.getModelInfo(mSampleDirPath + "/" + SPEECH_FEMALE_MODEL_NAME);
+        LogUtil.d(TAG, "speechModelInfo=" + speechModelInfo);
     }
 
     @Override
-    public void speak(String msg) {
+    public void speak(String msg, String speed, String volume) {
         if (mSpeechSynthesizer != null) {
+            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEED, speed);
+            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_VOLUME, volume);
             mSpeechSynthesizer.speak(msg);
         }
+    }
+
+    @Override
+    public boolean isSpeaking() {
+        return isSpeaking;
     }
 
     @Override
@@ -190,18 +267,13 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
     }
 
     @Override
-    public void changeVolume(String volume) {
-        if (mSpeechSynthesizer != null) {
-            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_VOLUME, volume);
-        }
+    public void setSpeakerResult(SpeakerResultListener speakerResult) {
+        this.speakResult = speakerResult;
     }
 
     @Override
-    public void changeSpeed(String speed) {
-        if (null != mSpeechSynthesizer) {
-            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEED, speed);
-        }
-
+    public void setInitResult(InitResultListener initResultListener) {
+        this.initResultListener = initResultListener;
     }
 
     @Override
@@ -212,19 +284,47 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
     }
 
     @Override
-    public void changeSpeaker(Context mContext, String speaker) {
+    public boolean changeSpeaker(Context mContext, String speaker) {
         this.speaker = speaker;
         if (null != mSpeechSynthesizer) {
             SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                     Activity.MODE_PRIVATE);
             sharedPreferences.edit().putString(TTS_SP_B_SPEAKER_KEY, speaker).apply();
             mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEAKER, speaker);
+            return true;
         }
+        return false;
     }
 
 
     @Override
-    public void changePlatform(Context mContext, HashMap<String, Integer> params) {
+    public void changePlatform(Context mContext, HashMap<String, String> params) {
+        tempAppId = params.get(KEY_BAI_DU_ID);
+        tempApiKey = params.get(KEY_BAI_DU_API);
+        tempSecretKey = params.get(KEY_BAI_DU_SECRET);
+        if (TextUtils.isEmpty(tempAppId) || TextUtils.isEmpty(tempApiKey)
+                || TextUtils.isEmpty(tempSecretKey)) {
+            return;
+        }
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
+                Activity.MODE_PRIVATE);
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_API, tempApiKey).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_ID, tempAppId).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_SECRET, tempSecretKey).apply();
+
+//
+//        if (TextUtils.isEmpty(tempAppId) || TextUtils.isEmpty(tempApiKey)
+//                || TextUtils.isEmpty(tempSecretKey)) {
+//            tempAppId = null;
+//            tempApiKey = null;
+//            tempSecretKey = null;
+//            init(mContext);
+//            return;
+//        }
+//        appId = tempAppId;
+//        apiKey = tempApiKey;
+//        secretKey = tempSecretKey;
+//        init(mContext);
 
     }
 
@@ -278,7 +378,6 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 
     }
 
-
     @Override
     public void onSynthesizeDataArrived(String s, byte[] bytes, int i) {
 
@@ -291,6 +390,10 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 
     @Override
     public void onSpeechStart(String s) {
+        isSpeaking = true;
+        if (speakResult != null) {
+            speakResult.speakStart();
+        }
 
     }
 
@@ -301,11 +404,17 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 
     @Override
     public void onSpeechFinish(String s) {
-
+        isSpeaking = false;
+        if (speakResult != null) {
+            speakResult.speakSuccess();
+        }
     }
 
     @Override
     public void onError(String s, SpeechError speechError) {
-
+        isSpeaking = false;
+        if (speakResult != null) {
+            speakResult.speakError(speechError.code, s);
+        }
     }
 }

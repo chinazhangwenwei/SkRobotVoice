@@ -3,6 +3,7 @@ package com.interjoy.sktts.impls;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.interjoy.sktts.interfaces.TtsProvider;
@@ -23,7 +24,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 
+import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_API;
+import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_ID;
+import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_SECRET;
 import static com.interjoy.sktts.manager.TtsManager.TTS_LING_YUN_TYPE;
+
 
 /**
  * Title:
@@ -43,14 +48,58 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
     private TTSCommonPlayer ttsCommonPlayer = null;
     private TtsConfig ttsConfig = null;
     private String valueTtsCap = "tts.cloud.wangjing";//说话人
+    private SpeakerResultListener speakResult;
+    private InitResultListener initResultListener;
 
-    public String valueHci = "905d5423"; //key值
-    public String valueHciDevelop = "4f6eb9f03584f3c5cf82798f7c5ea70f";//平台生成校验值
+    private String tempValueHci = null;
+    private String tempValueHciDevelop = null;
+    private String tempValueHciColundUrl = null;
+    public static String KEY_HCI = "KEY_HCI_TTS";
+    public static String KEY_HCI_DEVELOP = "KEY_HCI_DEVELOP_TTS";
+    public static String KEY_HCI_COLUND_URL = "KEY_HCI_COLUND_URL_TTS";
+
+    public static String KEY_TEMP_HCI = "KEY_TEMP_HCI_TTS";
+    public static String KEY_TEMP_HCI_DEVELOP = "KEY_TEMP_HCI_DEVELOP_TTS";
+    public static String KEY_TEMP_HCI_COLUND_URL = "KEY_TEMP_HCI_COLUND_URL_TTS";
+
+    public String valueHci = "e05d542b"; //key值
+    public String valueHciDevelop = "b99be26181529d657a88af657f47a093";//平台生成校验值
     public String valueHciColundUrl = "test.api.hcicloud.com:8888";//平台生成的url
 
 
     @Override
-    public void init(Context mContext, InitResultListener initResultListener) {
+    public void init(Context mContext) {
+        final SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
+                Activity.MODE_PRIVATE);
+        tempValueHci = sharedPreferences.getString(KEY_TEMP_HCI, "");
+        tempValueHciDevelop = sharedPreferences.getString(KEY_TEMP_HCI_DEVELOP, "");
+        tempValueHciColundUrl = sharedPreferences.getString(KEY_TEMP_HCI_COLUND_URL, "");
+//        if (TextUtils.isEmpty(tempValueHci)) {
+//            valueHci = sharedPreferences.getString(KEY_HCI, valueHci);
+//            valueHciDevelop = sharedPreferences.getString(KEY_HCI_DEVELOP, valueHciDevelop);
+//            valueHciColundUrl = sharedPreferences.getString(KEY_HCI_COLUND_URL, valueHciColundUrl);
+//        }
+
+        if (TextUtils.isEmpty(tempValueHci) || TextUtils.isEmpty(tempValueHciDevelop)
+                || TextUtils.isEmpty(tempValueHciColundUrl)) {
+            //切换平台信息不完整，走正确初始化流程
+            LogUtil.d(TAG, "切换平台信息不完整，走正确初始化流程");
+            tempValueHci = null;
+            tempValueHciDevelop = null;
+            tempValueHciColundUrl = null;
+            valueHci = sharedPreferences.getString(KEY_HCI, valueHci);
+            valueHciDevelop = sharedPreferences.getString(KEY_HCI_DEVELOP, valueHciDevelop);
+            valueHciColundUrl = sharedPreferences.getString(KEY_HCI_COLUND_URL, valueHciColundUrl);
+        } else {
+            //切换平台信息完整，走切换逻辑
+            LogUtil.d(TAG, "切换平台信息完整，走切换逻辑");
+            valueHci = tempValueHci;
+            valueHciDevelop = tempValueHciDevelop;
+            valueHciColundUrl = tempValueHciColundUrl;
+            sharedPreferences.edit().putString(KEY_TEMP_HCI, "").apply();
+            sharedPreferences.edit().putString(KEY_TEMP_HCI_COLUND_URL, "").apply();
+            sharedPreferences.edit().putString(KEY_TEMP_HCI_DEVELOP, "").apply();
+        }
         InitParam initParam = getInitParam(mContext);
         String strConfig = initParam.getStringConfig();
         // 初始化
@@ -75,11 +124,7 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
         }
 
 //初始化ttsPlayer
-
-        SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
-                Activity.MODE_PRIVATE);
         valueTtsCap = sharedPreferences.getString(TTS_SP_H_SPEAKER_KEY, valueTtsCap);
-
         // 构造Tts初始化的帮助类的实例
         TtsInitParam ttsInitParam = new TtsInitParam();
         // 获取App应用中的lib的路径
@@ -99,6 +144,14 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
         if (ttsCommonPlayer.getPlayerState() == TTSPlayer.PLAYER_STATE_IDLE) {
 //
             Log.d(TAG, "initPlayer: TtsPlayer init succeed");
+            if (!TextUtils.isEmpty(tempValueHci)) {
+                sharedPreferences.edit().putString(KEY_HCI, tempValueHci).apply();
+                sharedPreferences.edit().putString(KEY_HCI_COLUND_URL, tempValueHciColundUrl).apply();
+                sharedPreferences.edit().putString(KEY_HCI_DEVELOP, tempValueHciDevelop).apply();
+                tempValueHciDevelop = null;
+                tempValueHci = null;
+                tempValueHciColundUrl = null;
+            }
             if (initResultListener != null) {
                 initResultListener.initSuccess();
             }
@@ -108,10 +161,7 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
             if (initResultListener != null) {
                 initResultListener.initError("灵云 tts　init error");
             }
-
-
         }
-//        initPlayer(mContext);
 
     }
 
@@ -154,7 +204,6 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
      * @return true 成功
      */
     private int checkAuthAndUpdateAuth() {
-
         // 获取系统授权到期时间
         int initResult;
         AuthExpireTime objExpireTime = new AuthExpireTime();
@@ -188,10 +237,11 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
 
 
     @Override
-    public void speak(String msg) {
+    public void speak(String msg, String speed, String volume) {
         if (ttsCommonPlayer == null) {
             return;
         }
+
         // 配置播放器的属性。包括：音频格式，音库文件，语音风格，语速等等。详情见文档。
         ttsConfig = new TtsConfig();
         // 音频格式
@@ -199,7 +249,8 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
         // 指定语音合成的能力(云端合成,发言人是XiaoKun)
         ttsConfig.addParam(TtsConfig.SessionConfig.PARAM_KEY_CAP_KEY, valueTtsCap);
         // 设置合成语速
-        ttsConfig.addParam(TtsConfig.BasicConfig.PARAM_KEY_SPEED, "5");
+        ttsConfig.addParam(TtsConfig.BasicConfig.PARAM_KEY_SPEED, speed);
+        ttsConfig.addParam(TtsConfig.BasicConfig.PARAM_KEY_VOLUME, volume);
         // property为私有云能力必选参数，公有云传此参数无效
         ttsConfig.addParam("property", "cn_xiaokun_common");
 
@@ -219,6 +270,17 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
     }
 
     @Override
+    public void setSpeakerResult(SpeakerResultListener speakerResult) {
+        this.speakResult = speakerResult;
+    }
+
+
+    @Override
+    public void setInitResult(InitResultListener initResultListener) {
+        this.initResultListener = initResultListener;
+    }
+
+    @Override
     public int getPlatform() {
         return TTS_LING_YUN_TYPE;
     }
@@ -235,15 +297,6 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
 
     }
 
-    @Override
-    public void changeVolume(String volume) {
-
-    }
-
-    @Override
-    public void changeSpeed(String speed) {
-
-    }
 
     @Override
     public void changePitch(String pitch) {
@@ -251,11 +304,12 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
     }
 
     @Override
-    public void changeSpeaker(Context mContext, String speaker) {
+    public boolean changeSpeaker(Context mContext, String speaker) {
         valueTtsCap = speaker;
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                 Activity.MODE_PRIVATE);
         sharedPreferences.edit().putString(TTS_SP_H_SPEAKER_KEY, valueTtsCap).apply();
+        return true;
 
     }
 
@@ -265,8 +319,33 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
     }
 
     @Override
-    public void changePlatform(Context mContext, HashMap<String, Integer> params) {
+    public void changePlatform(Context mContext, HashMap<String, String> params) {
+        tempValueHci = params.get(KEY_HCI);
+        tempValueHciColundUrl = params.get(KEY_HCI_COLUND_URL);
+        tempValueHciDevelop = params.get(KEY_HCI_DEVELOP);
+        if (TextUtils.isEmpty(tempValueHci) || TextUtils.isEmpty(tempValueHciColundUrl)
+                || TextUtils.isEmpty(tempValueHciDevelop)) {
+            return;
+        }
+        SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
+                Activity.MODE_PRIVATE);
+        sharedPreferences.edit().putString(KEY_TEMP_HCI, tempValueHci).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_HCI_COLUND_URL, tempValueHciColundUrl).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_HCI_DEVELOP, tempValueHciDevelop).apply();
 
+
+//        if (TextUtils.isEmpty(tempValueHci) || TextUtils.isEmpty(tempValueHciColundUrl)
+//                || TextUtils.isEmpty(tempValueHciDevelop)) {
+//            tempValueHci = null;
+//            tempValueHciColundUrl = null;
+//            tempValueHciDevelop = null;
+//            init(mContext);
+//            return;
+//        }
+//        valueHciColundUrl = tempValueHciColundUrl;
+//        valueHciDevelop = tempValueHciDevelop;
+//        valueHci = tempValueHci;
+//        init(mContext);
     }
 
     @Override
@@ -301,7 +380,24 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
 
     @Override
     public void onPlayerEventStateChange(TTSCommonPlayer.PlayerEvent playerEvent) {
+        if (playerEvent.ordinal() == TTSCommonPlayer.PlayerEvent.PLAYER_EVENT_BEGIN.ordinal()) {
+            if (speakResult != null) {
+                speakResult.speakStart();
+            }
 
+        }
+        if (playerEvent.ordinal() == TTSCommonPlayer.PlayerEvent.PLAYER_EVENT_END.ordinal()) {
+
+            if (speakResult != null) {
+                speakResult.speakSuccess();
+            }
+        }
+
+    }
+
+    @Override
+    public boolean isSpeaking() {
+        return ttsCommonPlayer.getPlayerState() == TTSCommonPlayer.PLAYER_STATE_PLAYING;
     }
 
     @Override
@@ -313,6 +409,8 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
     @Override
     public void onPlayerEventPlayerError(TTSCommonPlayer.PlayerEvent playerEvent
             , int i) {
-
+        if (speakResult != null) {
+            speakResult.speakError(playerEvent.ordinal(), playerEvent.name());
+        }
     }
 }

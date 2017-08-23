@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.InitListener;
@@ -39,9 +40,11 @@ public class IflytekTtsImpl implements TtsProvider {
     private String speaker = "xiaoyan";   // 默认发音人
     private static final String TAG = "IflytekTtsImpl";
     public String appId = "598912bd";
+    private SpeakerResultListener speakResult;
+    private InitResultListener initResultListener;
 
     @Override
-    public void init(final Context mContext, final InitResultListener initResultListener) {
+    public void init(final Context mContext) {
         SpeechUtility.createUtility(mContext, "appid=" + appId);
         mTts = SpeechSynthesizer.createSynthesizer(mContext, new InitListener() {
             @Override
@@ -100,14 +103,30 @@ public class IflytekTtsImpl implements TtsProvider {
     }
 
     @Override
-    public void speak(String msg) {
+    public void speak(String msg, String speed, String volume) {
 //
         if (mTts == null) {
             return;
         }
+        String tempSpeed;
+        String tempVolume;
+        try {
+            tempSpeed = Integer.parseInt(speed) * 10 + 9 + "";
+            tempVolume = Integer.parseInt(volume) * 10 + 9 + "";
+        } catch (NumberFormatException e) {
+            tempSpeed = this.speed;
+            tempVolume = this.volume;
+            e.printStackTrace();
+        }
+        Log.d(TAG, "speak: " + tempSpeed + "tempVolume" + tempVolume);
+        mTts.setParameter(SpeechConstant.SPEED, tempSpeed);
+        mTts.setParameter(SpeechConstant.VOLUME, tempVolume);
         mTts.startSpeaking(msg, new SynthesizerListener() {
             @Override
             public void onSpeakBegin() {
+                if (speakResult != null) {
+                    speakResult.speakStart();
+                }
 
             }
 
@@ -133,7 +152,14 @@ public class IflytekTtsImpl implements TtsProvider {
 
             @Override
             public void onCompleted(SpeechError speechError) {
-
+                if (speakResult != null) {
+                    if (speechError == null) {
+                        speakResult.speakSuccess();
+                    } else {
+                        speakResult.speakError(speechError.getErrorCode(),
+                                speechError.getErrorDescription());
+                    }
+                }
             }
 
             @Override
@@ -145,13 +171,18 @@ public class IflytekTtsImpl implements TtsProvider {
     }
 
     @Override
-    public void changeVolume(String volume) {
-        mTts.setParameter(SpeechConstant.VOLUME, volume);
+    public boolean isSpeaking() {
+        return mTts.isSpeaking();
     }
 
     @Override
-    public void changeSpeed(String speed) {
-        mTts.setParameter(SpeechConstant.SPEED, speed);
+    public void setSpeakerResult(SpeakerResultListener speakerResult) {
+        this.speakResult = speakerResult;
+    }
+
+    @Override
+    public void setInitResult(InitResultListener initResultListener) {
+        this.initResultListener = initResultListener;
     }
 
     @Override
@@ -160,12 +191,16 @@ public class IflytekTtsImpl implements TtsProvider {
     }
 
     @Override
-    public void changeSpeaker(Context mContext, String speaker) {
+    public boolean changeSpeaker(Context mContext, String speaker) {
         this.speaker = speaker;
+        if (mTts == null) {
+            return false;
+        }
         mTts.setParameter(SpeechConstant.VOICE_NAME, speaker);
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                 Activity.MODE_PRIVATE);
         sharedPreferences.edit().putString(TTS_SP_IF_SPEAKER_KEY, speaker).apply();
+        return true;
     }
 
     @Override
@@ -174,8 +209,8 @@ public class IflytekTtsImpl implements TtsProvider {
     }
 
     @Override
-    public void changePlatform(Context mContext, HashMap<String, Integer> params) {
-
+    public void changePlatform(Context mContext, HashMap<String, String> params) {
+        init(mContext);
     }
 
     @Override
@@ -223,6 +258,7 @@ public class IflytekTtsImpl implements TtsProvider {
             return;
         }
         mTts.destroy();
+        SpeechUtility.getUtility().destroy();
         mTts = null;
     }
 }

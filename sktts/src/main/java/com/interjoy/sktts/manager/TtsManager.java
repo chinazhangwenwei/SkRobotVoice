@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import com.interjoy.sktts.impls.BaiduTtsImpl;
 import com.interjoy.sktts.impls.HciTtsImpl;
 import com.interjoy.sktts.impls.IflytekTtsImpl;
+import com.interjoy.sktts.impls.YunTtsImpl;
 import com.interjoy.sktts.interfaces.TtsProvider;
 import com.interjoy.sktts.util.LogUtil;
 
@@ -29,6 +30,7 @@ public class TtsManager implements TtsProvider {
     public static final int TTS_YUN_ZHI_SHENG_TYPE = 0x00000011;//云知声
     public static final int TTS_LING_YUN_TYPE = 0x00000100;// 灵云
     private static final String TAG = "TtsManager";//debug过滤
+    private int ttsStatus = 0;//(0,没有初始化 1 初始化成功 2 初始化失败)
 
 
     public final String arrayBaidu[] = {"0", "1", "2", "3", "4"};
@@ -40,6 +42,11 @@ public class TtsManager implements TtsProvider {
             "xiaoxin", "nannan", "vils",
     };
     private TtsProvider ttsProvider;
+
+    private SpeakerResultListener speakerResultListener;
+    private SpeakerResultListener speakerResult;
+    private InitResultListener initListener;
+    private InitResultListener changeTtsInitListener;
 
 
     private volatile static TtsManager ttsManager;
@@ -59,8 +66,51 @@ public class TtsManager implements TtsProvider {
     private TtsManager(Context mContext) {
         SharedPreferences sharedPreferences = mContext.
                 getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
-        int plat = sharedPreferences.getInt(TTS_PLATFORM, TTS_LING_YUN_TYPE);
+        int plat = sharedPreferences.getInt(TTS_PLATFORM, TTS_BAI_DU_TTS);
         initPlat(plat);
+        speakerResultListener = new SpeakerResultListener() {
+            @Override
+            public void speakSuccess() {
+                LogUtil.d(TAG, "speakSuccess");
+                if (speakerResult != null) {
+                    speakerResult.speakSuccess();
+                }
+            }
+
+            @Override
+            public void speakError(int type, String message) {
+                LogUtil.d(TAG, "speakError" + message);
+                if (speakerResult != null) {
+                    speakerResult.speakError(type, message);
+                }
+            }
+
+            @Override
+            public void speakStart() {
+                if (speakerResult != null) {
+                    speakerResult.speakStart();
+                }
+            }
+        };
+        changeTtsInitListener = new InitResultListener() {
+            @Override
+            public void initSuccess() {
+                ttsStatus = 1;
+                if (initListener != null) {
+                    initListener.initSuccess();
+                }
+
+            }
+
+            @Override
+            public void initError(String message) {
+                ttsStatus = 2;
+                if (initListener != null) {
+                    initListener.initError(message);
+                }
+            }
+        };
+
     }
 
     private void initPlat(int plat) {
@@ -75,37 +125,55 @@ public class TtsManager implements TtsProvider {
                 ttsProvider = new BaiduTtsImpl();
                 break;
             case TTS_YUN_ZHI_SHENG_TYPE:
+                ttsProvider = new YunTtsImpl();
                 break;
         }
     }
 
     @Override
-    public void init(Context mContext, final InitResultListener initResultListener) {
-        InitResultListener initResultListener1 = new InitResultListener() {
-            @Override
-            public void initSuccess() {
-                if (initResultListener != null) {
-                    initResultListener.initSuccess();
-                }
+    public void init(Context mContext) {
+        ttsProvider.setInitResult(changeTtsInitListener);
+        ttsProvider.setSpeakerResult(speakerResultListener);
+        ttsProvider.init(mContext);
 
-            }
-
-            @Override
-            public void initError(String message) {
-                if (initResultListener != null) {
-                    initResultListener.initError(message);
-                }
-            }
-        };
-        ttsProvider.init(mContext, initResultListener1);
     }
 
     @Override
-    public void speak(String msg) {
+    public void speak(String msg, String speed, String volume) {
         if (ttsProvider == null) {
             return;
         }
-        ttsProvider.speak(msg);
+        String tempSpeeds;
+        try {
+            int tempSpeed = Integer.parseInt(speed);
+            if (tempSpeed < 0) {
+                tempSpeed = 0;
+            }
+            if (tempSpeed > 9) {
+                tempSpeed = 9;
+            }
+            tempSpeeds = tempSpeed + "";
+        } catch (NumberFormatException e) {
+            tempSpeeds = "5";
+            e.printStackTrace();
+        }
+        String tempVolumes;
+        try {
+            int tempVolume = Integer.parseInt(volume);
+            if (tempVolume < 0) {
+                tempVolume = 0;
+            }
+            if (tempVolume > 9) {
+                tempVolume = 9;
+            }
+            tempVolumes = tempVolume + "";
+        } catch (NumberFormatException e) {
+            tempVolumes = "5";
+            e.printStackTrace();
+        }
+        LogUtil.d(TAG, "tempSpeeds__" + tempSpeeds + "tempVolume__" + tempVolumes);
+
+        ttsProvider.speak(msg, tempSpeeds, tempVolumes);
 
     }
 
@@ -115,23 +183,44 @@ public class TtsManager implements TtsProvider {
     }
 
     @Override
-    public void changeVolume(String volume) {
-        ttsProvider.changeVolume(volume);
-    }
-
-    @Override
-    public void changeSpeed(String speed) {
-
+    public boolean isSpeaking() {
+        return ttsProvider.isSpeaking();
     }
 
     @Override
     public void changePitch(String pitch) {
-
+        ttsProvider.changePitch(pitch);
     }
 
     @Override
-    public void changeSpeaker(Context mContext, String speaker) {
-        ttsProvider.changeSpeaker(mContext, speaker);
+    public boolean changeSpeaker(Context mContext, String speaker) {
+        int currentType = getPlatform();
+        int position = -1;
+        switch (currentType) {
+            case TTS_BAI_DU_TTS:
+                position = findPosition(speaker, arrayBaidu);
+                break;
+            case TTS_LING_YUN_TYPE:
+                String[] tempSpeaker = speaker.split("\\.");
+                if (tempSpeaker == null) {
+                    LogUtil.d(TAG, "tempSpeaker==null");
+                    return false;
+                }
+                LogUtil.d(TAG, tempSpeaker[tempSpeaker.length - 1]);
+                position = findPosition(tempSpeaker[tempSpeaker.length - 1],
+                        arrayLingYun);
+                break;
+            case TTS_XUN_FEI_TYPE:
+                position = findPosition(speaker, arrayXunFei);
+                break;
+            case TTS_YUN_ZHI_SHENG_TYPE:
+                position = 0;
+                break;
+        }
+        if (position == -1) {
+            return false;
+        }
+        return ttsProvider.changeSpeaker(mContext, speaker);
     }
 
     @Override
@@ -140,31 +229,44 @@ public class TtsManager implements TtsProvider {
     }
 
     @Override
-    public void changePlatform(final Context mContext, HashMap<String, Integer> params) {
-
-        final int plat = params.get(TTS_PLATFORM);
-        if (plat == ttsProvider.getPlatform()) {
-            return;
-        }
-        ttsProvider.onDestroy();
-        initPlat(plat);
-        InitResultListener initResultListener = new InitResultListener() {
-            @Override
-            public void initSuccess() {
-                SharedPreferences sharedPreferences = mContext.
-                        getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
-                sharedPreferences.edit().putInt(TTS_PLATFORM, plat).apply();
-
-            }
-
-            @Override
-            public void initError(String message) {
-                LogUtil.d(TAG, "initError: " + message);
-                reset(mContext);
-            }
-        };
-        ttsProvider.init(mContext, initResultListener);
-
+    public void changePlatform(final Context mContext, HashMap<String, String> params) {
+ //   final int plat = Integer.parseInt(params.get(TTS_PLATFORM));
+//        if (plat == ttsProvider.getPlatform()) {
+//            return;
+//        }
+//        ttsProvider.onDestroy();
+//        initPlat(plat);
+//
+//        final InitResultListener initResultListener = new InitResultListener() {
+//            @Override
+//            public void initSuccess() {
+//                ttsStatus = 1;
+//                SharedPreferences sharedPreferences = mContext.
+//                        getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
+//                sharedPreferences.edit().putInt(TTS_PLATFORM, plat).apply();
+//                if (initListener != null) {
+//                    initListener.initSuccess();
+//                }
+//            }
+//
+//            @Override
+//            public void initError(String message) {
+//                ttsStatus = 2;
+//                reset(mContext);
+//                if (initListener != null) {
+//                    initListener.initError(message);
+//                }
+//            }
+//        };
+//        ttsProvider.setInitResult(initResultListener);
+//        ttsProvider.setSpeakerResult(speakerResultListener);
+//
+//        ttsProvider.changePlatform(mContext, params);
+        final int plat = Integer.parseInt(params.get(TTS_PLATFORM));
+        SharedPreferences sharedPreferences = mContext.
+                getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
+        sharedPreferences.edit().putInt(TTS_TEMP_PLATFORM, plat).apply();
+        ttsProvider.changePlatform(mContext, params);
 
     }
 
@@ -175,7 +277,10 @@ public class TtsManager implements TtsProvider {
         int plat = sharedPreferences.getInt(TTS_PLATFORM, TTS_BAI_DU_TTS);
         ttsProvider.onDestroy();
         initPlat(plat);
-        ttsProvider.init(mContext, null);
+        ttsProvider.setSpeakerResult(speakerResultListener);
+        ttsProvider.setInitResult(changeTtsInitListener);
+        ttsProvider.init(mContext);
+
     }
 
 
@@ -204,6 +309,9 @@ public class TtsManager implements TtsProvider {
                 break;
             case TTS_XUN_FEI_TYPE:
                 position = 0;
+                break;
+            case TTS_YUN_ZHI_SHENG_TYPE:
+                position = 3;
                 break;
         }
         return position;
@@ -252,7 +360,7 @@ public class TtsManager implements TtsProvider {
 
     //找数组中某个内容的位置
     public int findPosition(String content, String array[]) {
-        int position = 0;
+        int position = -1;
         for (int i = 0; i < array.length; i++) {
             if (array[i].equals(content)) {
                 position = i;
@@ -260,5 +368,16 @@ public class TtsManager implements TtsProvider {
             }
         }
         return position;
+    }
+
+    @Override
+    public void setSpeakerResult(SpeakerResultListener speakerResult) {
+        this.speakerResult = speakerResult;
+    }
+
+    @Override
+    public void setInitResult(InitResultListener initResultListener) {
+        this.initListener = initResultListener;
+
     }
 }
