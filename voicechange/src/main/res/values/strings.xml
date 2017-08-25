@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">语音切换</string>
+    <string-array name="asr_platform">
+        <item>科大讯飞</item>
+        <item>捷通华声</item>
+    </string-array>
+    <string-array name="baidu_tts">
+        <item>百度-普通女声</item>
+        <item>百度-普通男声</item>
+        <item>百度-特别男声</item>
+        <item>百度-情感男声-度逍遥</item>
+        <item>百度-情感儿童声-度丫丫</item>
+    </string-array>
+    <string-array name="ling_yun_tts">
+        <item>tts.cloud.wangjing</item>
+        <item>tts.cloud.xiaokun</item>
+        <item>tts.cloud.haobo</item>
+        <item>tts.cloud.xixi</item>
+        <item>tts.cloud.xiaojie</item>
+        <item>tts.cloud.serena</item>
+        <item>tts.cloud.daniel</item>
+        <item>tts.cloud.tom</item>
+        <item>tts.cloud.samantha</item>
+        <item>tts.cloud.allison</item>
+        <item>tts.cloud.donna</item>
+        <item>tts.cloud.jill</item>
+        <item>tts.cloud.carol</item>
+
+    </string-array>
+    <string-array name="ling_yun_tts_des">
+        <item>中文女声wangjing</item>
+        <item>中文女声xiaokun</item>
+        <item>中文男声haobo</item>
+        <item>女童声xixi</item>
+        <item>中文粤语女声xiaojie</item>
+        <item>英语女声serena</item>
+        <item>英语男声daniel</item>
+        <item>美式英语男声tom</item>
+        <item>美式英语女声samantha</item>
+        <item>美式英语女声allison</item>
+        <item>美式英语女声donna</item>
+        <item>美式英语女声jill</item>
+        <item>美式英语女声carol</item>
+
+    </string-array>
+    <string-array name="xun_fei_tts_des">
+        <item>小燕—女青、中英、普通话</item>
+        <item>小宇—男青、中英、普通话</item>
+        <item>凯瑟琳—女青、英</item>
+        <item>亨利—男青、英</item>
+        <item>玛丽—女青、英</item>
+        <item>小研—女青、中英、普通话</item>
+        <item>小琪—女青、中英、普通话</item>
+        <item>小峰—男青、中英、普通话</item>
+        <item>小梅—女青、中英、粤语</item>
+        <item>小莉—女青、中英、台湾普通话</item>
+        <item>小蓉—女青、中、四川话</item>
+        <item>小芸—女青、中、东北话</item>
+        <item>小坤—男青、中、河南话</item>
+        <item>小强—男青、中、湖南话</item>
+        <item>小莹—女青、中、陕西话</item>
+        <item>小新—男童、中、普通话</item>
+        <item>楠楠—女童、中、普通话</item>
+        <item>老孙—男老、中、普通话</item>
+    </string-array>
+    <string-array name="xun_fei_tts">
+        <item>xiaoyan</item>
+        <item>xiaoyu</item>
+        <item>catherine</item>
+        <item>henry</item>
+        <item>vimary</item>
+        <item>vixy</item>
+        <item>xiaoqi</item>
+        <item>vixf</item>
+        <item>xiaomei</item>
+        <item>xiaolin</item>
+        <item>xiaorong</item>
+        <item>xiaoqian</item>
+        <item>xiaokun</item>
+        <item>xiaoqiang</item>
+        <item>vixying</item>
+        <item>xiaoxin</item>
+        <item>nannan</item>
+        <item>vils</item>
+    </string-array>
+
+    <string-array name="tts_platform">
+        <item>科大讯飞</item>
+        <item>捷通华声</item>
+        <item>百度</item>
+        <item>云知声</item>
+    </string-array>
+</resources>
