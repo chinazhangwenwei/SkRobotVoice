@@ -7,6 +7,9 @@ import com.unisound.client.SpeechConstants;
 import com.unisound.client.SpeechSynthesizer;
 import com.unisound.client.SpeechSynthesizerListener;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.HashMap;
 
 import static com.interjoy.sktts.manager.TtsManager.TTS_YUN_ZHI_SHENG_TYPE;
@@ -56,9 +59,6 @@ public class YunTtsImpl implements TtsProvider {
                         break;
                     case SpeechConstants.TTS_EVENT_SYNTHESIZER_END:
                         // 合成结束回调
-                        if (speakResult != null) {
-                            speakResult.speakSuccess();
-                        }
                         break;
                     case SpeechConstants.TTS_EVENT_BUFFER_BEGIN:
                         // 开始缓存回调
@@ -107,6 +107,21 @@ public class YunTtsImpl implements TtsProvider {
             }
         });
         mTTSPlayer.init("");
+    }
+
+    @Override
+    public String getTtsInfo() {
+        String info = "";
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("appKey", "pbm7th2ifvq4hhij6kfmgo2as3uapfbds4lnbfig");
+            jsonObject.put("secret", "92b7af3dc000491fa6916c44bb87e7c4");
+            info = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            info = "";
+        }
+        return info;
     }
 
     @Override

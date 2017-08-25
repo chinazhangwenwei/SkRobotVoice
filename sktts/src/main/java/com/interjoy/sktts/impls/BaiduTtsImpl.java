@@ -15,6 +15,9 @@ import com.baidu.tts.client.TtsMode;
 import com.interjoy.sktts.interfaces.TtsProvider;
 import com.interjoy.sktts.util.LogUtil;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -308,9 +311,9 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
         }
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                 Activity.MODE_PRIVATE);
-        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_API, tempApiKey).apply();
-        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_ID, tempAppId).apply();
-        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_SECRET, tempSecretKey).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_API, tempApiKey).commit();
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_ID, tempAppId).commit();
+        sharedPreferences.edit().putString(KEY_TEMP_BAI_DU_SECRET, tempSecretKey).commit();
 
 //
 //        if (TextUtils.isEmpty(tempAppId) || TextUtils.isEmpty(tempApiKey)
@@ -325,6 +328,23 @@ public class BaiduTtsImpl implements TtsProvider, SpeechSynthesizerListener {
 //        apiKey = tempApiKey;
 //        secretKey = tempSecretKey;
 //        init(mContext);
+
+    }
+
+    @Override
+    public String getTtsInfo() {
+        String info = "";
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(KEY_BAI_DU_ID, appId);
+            jsonObject.put(KEY_BAI_DU_API, apiKey);
+            jsonObject.put(KEY_BAI_DU_SECRET, secretKey);
+            info = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            info = "";
+        }
+        return info;
 
     }
 

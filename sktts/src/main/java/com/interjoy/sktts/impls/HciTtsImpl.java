@@ -18,15 +18,15 @@ import com.sinovoice.hcicloudsdk.common.tts.TtsInitParam;
 import com.sinovoice.hcicloudsdk.player.TTSCommonPlayer;
 import com.sinovoice.hcicloudsdk.player.TTSPlayerListener;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 
-import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_API;
-import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_ID;
-import static com.interjoy.sktts.impls.BaiduTtsImpl.KEY_TEMP_BAI_DU_SECRET;
 import static com.interjoy.sktts.manager.TtsManager.TTS_LING_YUN_TYPE;
 
 
@@ -329,9 +329,9 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
         }
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(TTS_SP_KEY,
                 Activity.MODE_PRIVATE);
-        sharedPreferences.edit().putString(KEY_TEMP_HCI, tempValueHci).apply();
-        sharedPreferences.edit().putString(KEY_TEMP_HCI_COLUND_URL, tempValueHciColundUrl).apply();
-        sharedPreferences.edit().putString(KEY_TEMP_HCI_DEVELOP, tempValueHciDevelop).apply();
+        sharedPreferences.edit().putString(KEY_TEMP_HCI, tempValueHci).commit();
+        sharedPreferences.edit().putString(KEY_TEMP_HCI_COLUND_URL, tempValueHciColundUrl).commit();
+        sharedPreferences.edit().putString(KEY_TEMP_HCI_DEVELOP, tempValueHciDevelop).commit();
 
 
 //        if (TextUtils.isEmpty(tempValueHci) || TextUtils.isEmpty(tempValueHciColundUrl)
@@ -346,6 +346,23 @@ public class HciTtsImpl implements TtsProvider, TTSPlayerListener {
 //        valueHciDevelop = tempValueHciDevelop;
 //        valueHci = tempValueHci;
 //        init(mContext);
+    }
+
+    @Override
+    public String getTtsInfo() {
+
+        String info = "";
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(KEY_HCI, valueHci);
+            jsonObject.put(KEY_HCI_DEVELOP, valueHciDevelop);
+            jsonObject.put(KEY_HCI_COLUND_URL, valueHciColundUrl);
+            info = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            info = "";
+        }
+        return info;
     }
 
     @Override

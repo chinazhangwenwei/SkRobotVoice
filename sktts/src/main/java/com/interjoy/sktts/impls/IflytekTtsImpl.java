@@ -16,6 +16,9 @@ import com.iflytek.cloud.SynthesizerListener;
 import com.interjoy.sktts.interfaces.TtsProvider;
 import com.interjoy.sktts.util.LogUtil;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.HashMap;
 
 import static com.interjoy.sktts.manager.TtsManager.TTS_XUN_FEI_TYPE;
@@ -176,6 +179,21 @@ public class IflytekTtsImpl implements TtsProvider {
     }
 
     @Override
+    public String getTtsInfo() {
+
+        String info = "";
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("appId", appId);
+            info = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            info = "";
+        }
+        return info;
+    }
+
+    @Override
     public void setSpeakerResult(SpeakerResultListener speakerResult) {
         this.speakResult = speakerResult;
     }
@@ -258,7 +276,7 @@ public class IflytekTtsImpl implements TtsProvider {
             return;
         }
         mTts.destroy();
-        SpeechUtility.getUtility().destroy();
+//        SpeechUtility.getUtility().destroy();
         mTts = null;
     }
 }

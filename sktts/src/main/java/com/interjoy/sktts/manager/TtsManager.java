@@ -11,6 +11,9 @@ import com.interjoy.sktts.impls.YunTtsImpl;
 import com.interjoy.sktts.interfaces.TtsProvider;
 import com.interjoy.sktts.util.LogUtil;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.HashMap;
 
 /**
@@ -31,6 +34,8 @@ public class TtsManager implements TtsProvider {
     public static final int TTS_LING_YUN_TYPE = 0x00000100;// 灵云
     private static final String TAG = "TtsManager";//debug过滤
     private int ttsStatus = 0;//(0,没有初始化 1 初始化成功 2 初始化失败)
+    private boolean isChange = false;
+    private int plat = -1;
 
 
     public final String arrayBaidu[] = {"0", "1", "2", "3", "4"};
@@ -63,10 +68,16 @@ public class TtsManager implements TtsProvider {
         return ttsManager;
     }
 
-    private TtsManager(Context mContext) {
-        SharedPreferences sharedPreferences = mContext.
+    private TtsManager(final Context mContext) {
+        final SharedPreferences sharedPreferences = mContext.
                 getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
-        int plat = sharedPreferences.getInt(TTS_PLATFORM, TTS_BAI_DU_TTS);
+        plat = sharedPreferences.getInt(TTS_TEMP_PLATFORM, -1);
+        LogUtil.d(TAG, "TtsManager" + plat);
+        isChange = true;
+        if (plat == -1) {
+            isChange = false;
+            plat = sharedPreferences.getInt(TTS_PLATFORM, TTS_BAI_DU_TTS);
+        }
         initPlat(plat);
         speakerResultListener = new SpeakerResultListener() {
             @Override
@@ -95,6 +106,11 @@ public class TtsManager implements TtsProvider {
         changeTtsInitListener = new InitResultListener() {
             @Override
             public void initSuccess() {
+                if (isChange) {
+                    LogUtil.d(TAG, "changeSuccess");
+                    sharedPreferences.edit().putInt(TTS_PLATFORM, plat).apply();
+                    sharedPreferences.edit().putInt(TTS_TEMP_PLATFORM, -1).apply();
+                }
                 ttsStatus = 1;
                 if (initListener != null) {
                     initListener.initSuccess();
@@ -107,6 +123,11 @@ public class TtsManager implements TtsProvider {
                 ttsStatus = 2;
                 if (initListener != null) {
                     initListener.initError(message);
+                }
+                if (isChange) {
+                    LogUtil.d(TAG, "changeError");
+                    sharedPreferences.edit().putInt(TTS_TEMP_PLATFORM, -1).apply();
+                    reset(mContext);
                 }
             }
         };
@@ -230,7 +251,7 @@ public class TtsManager implements TtsProvider {
 
     @Override
     public void changePlatform(final Context mContext, HashMap<String, String> params) {
- //   final int plat = Integer.parseInt(params.get(TTS_PLATFORM));
+        //   final int plat = Integer.parseInt(params.get(TTS_PLATFORM));
 //        if (plat == ttsProvider.getPlatform()) {
 //            return;
 //        }
@@ -263,9 +284,11 @@ public class TtsManager implements TtsProvider {
 //
 //        ttsProvider.changePlatform(mContext, params);
         final int plat = Integer.parseInt(params.get(TTS_PLATFORM));
+        LogUtil.d(TAG, plat + "切换");
         SharedPreferences sharedPreferences = mContext.
                 getSharedPreferences(TTS_SP_KEY, Activity.MODE_PRIVATE);
-        sharedPreferences.edit().putInt(TTS_TEMP_PLATFORM, plat).apply();
+        sharedPreferences.edit().putInt(TTS_TEMP_PLATFORM, plat).commit();
+        LogUtil.d(TAG, plat + "保存");
         ttsProvider.changePlatform(mContext, params);
 
     }
@@ -292,6 +315,28 @@ public class TtsManager implements TtsProvider {
         return ttsProvider.getPlatform();
 
     }
+
+    @Override
+    public String getTtsInfo() {
+        String info = "";
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("platDes", getPlatDes());
+            jsonObject.put("platForm", getPlatform());
+            jsonObject.put("speaker", getCurrentSpeaker());
+            jsonObject.put("speakerPosition", getSpeakerPosition());
+            jsonObject.put("ttsPosition", getTtsPosition());
+            jsonObject.put("ttsKeyInfo", new JSONObject(ttsProvider.getTtsInfo()));
+            info = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            info = "";
+        }
+        return info;
+
+
+    }
+
 
     @Override
     public String getCurrentSpeaker() {

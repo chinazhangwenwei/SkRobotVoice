@@ -95,6 +95,9 @@ public interface TtsProvider {
     //获取当前平台描述
     String getPlatDes();
 
+    //获取当前TTS信息
+    String getTtsInfo();
+
 
     void onPause();
 
