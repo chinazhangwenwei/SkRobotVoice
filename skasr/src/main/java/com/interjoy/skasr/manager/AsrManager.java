@@ -42,6 +42,7 @@ public class AsrManager implements AsrProvider {
 
     private volatile static AsrManager asrManager;
     private int startCount = 0;
+    public int asrStatus = 0;//(0,没有初始化 1 初始化成功 2 初始化失败)
 
 
     public static AsrManager getInstance(Context mContext) {
@@ -75,6 +76,7 @@ public class AsrManager implements AsrProvider {
             @Override
             public void initSuccess() {
                 Log.d(TAG, "initSuccess: ");
+                asrStatus = 1;
                 if (asrInitListener != null) {
                     asrInitListener.initSuccess();
                 }
@@ -89,6 +91,7 @@ public class AsrManager implements AsrProvider {
                 }
                 startCount++;
                 resetAsr();
+                asrStatus = 2;
                 if (asrInitListener != null) {
                     asrInitListener.initError(code, message);
                 }
@@ -132,6 +135,13 @@ public class AsrManager implements AsrProvider {
         init(mContext);
     }
 
+    @Override
+    public String getAsrInfo() {
+        if (asrProvider == null) {
+            return "";
+        }
+        return asrProvider.getAsrInfo();
+    }
 
     @Override
     public void changeAsr(Context mContext, Map<String, String> params) {
@@ -139,16 +149,10 @@ public class AsrManager implements AsrProvider {
             return;
         }
         int type = Integer.parseInt(params.get(KEY_ASR_PLAT_TYPE));
-
+        recordProvider.stop();
+        asrProvider.destroy();
         switch (type) {
             case KEY_LING_YUN_TYPE:
-//                if (getPlatform() == KEY_LING_YUN_TYPE) {
-//                    if (getAppId().equals(params.get(HciAsrImpl.KEY_HCI))) {
-//                        return;
-//                    }
-//                }
-                recordProvider.stop();
-                asrProvider.destroy();
                 asrProvider = new HciAsrImpl();
                 asrProvider.setAsrListener(asrResultListener);
                 asrProvider.setAsrInitListener(changeAsrInitListener);
@@ -156,14 +160,6 @@ public class AsrManager implements AsrProvider {
                 recordProvider.start();
                 break;
             case KEY_XUN_FEI_TYPE:
-//                if (getPlatform() == KEY_XUN_FEI_TYPE) {
-//                    if (getAppId().equals(params.get
-//                            (IflytekAsrImpl.KEY_XUN_APP_ID))) {
-//                        return;
-//                    }
-//                }
-                recordProvider.stop();
-                asrProvider.destroy();
                 asrProvider = new IflytekAsrImpl();
                 asrProvider.setAsrListener(asrResultListener);
                 asrProvider.setAsrInitListener(changeAsrInitListener);
@@ -178,19 +174,13 @@ public class AsrManager implements AsrProvider {
     @Override
     public void setAsrInitListener(AsrInitListener asrInitListener) {
         this.asrInitListener = asrInitListener;
-//        if (asrProvider != null) {
-//            asrProvider.setAsrInitListener(asrInitListener);
-//        }
+
     }
 
     //设置监听
     @Override
     public void setAsrListener(AsrResultListener asrListener) {
         asrResultListener = asrListener;
-//        if (asrProvider == null) {
-//            return;
-//        }
-//        asrProvider.setAsrListener(asrResultListener);
     }
 
     @Override
@@ -244,6 +234,25 @@ public class AsrManager implements AsrProvider {
             return "";
         }
         return asrProvider.getAppId();
+    }
+
+
+    public boolean isRecording() {
+        recordProvider.destroy();
+
+        return false;
+    }
+
+    public void releaseRecord() {
+        if (recordProvider != null) {
+            recordProvider.stop();
+        }
+    }
+
+    public void reStartRecord() {
+        if (recordProvider != null) {
+            recordProvider.start();
+        }
     }
 
     //停止

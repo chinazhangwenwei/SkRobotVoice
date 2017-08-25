@@ -24,7 +24,6 @@ public class RecordProviderImpl implements RecordProvider {
     private boolean isRecord = false;// 设置正在录制的状态
 
 
-
     private RecordListener recordListener;
 
     @Override
@@ -62,6 +61,14 @@ public class RecordProviderImpl implements RecordProvider {
             audioRecord.release();//释放资源
             audioRecord = null;
         }
+    }
+
+    public boolean isRecording() {
+        if (audioRecord != null) {
+            return audioRecord.getRecordingState() ==
+                    AudioRecord.RECORDSTATE_RECORDING;
+        }
+        return false;
     }
 
 

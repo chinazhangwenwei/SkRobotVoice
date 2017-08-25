@@ -18,6 +18,9 @@ import com.sinovoice.hcicloudsdk.common.asr.AsrGrammarId;
 import com.sinovoice.hcicloudsdk.common.asr.AsrInitParam;
 import com.sinovoice.hcicloudsdk.common.asr.AsrRecogResult;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -306,6 +309,21 @@ public class HciAsrImpl implements AsrProvider {
     public void setAsrListener(AsrResultListener asrListener) {
         this.asrListener = asrListener;
 
+    }
+
+    @Override
+    public String getAsrInfo() {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(KEY_HCI, valueHci);
+            jsonObject.put(KEY_HCI_DEVELOP, valueHciDevelop);
+            jsonObject.put(KEY_HCI_COLUND_URL, valueHciColundUrl);
+            jsonObject.put("platDes", "捷克华声");
+            jsonObject.put("platForm", getPlatform());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonObject.toString();
     }
 
     @Override

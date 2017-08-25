@@ -18,6 +18,9 @@ import com.interjoy.skasr.manager.AsrManager;
 import com.interjoy.util.JsonParser;
 import com.interjoy.util.LogUtil;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -40,8 +43,8 @@ public class IflytekAsrImpl implements AsrProvider {
     private SpeechRecognizer mIat;
 
     private static final String KEY_VAD_BOS = "4000";
-    private static final String KEY_VAD_EOS = "1000";
-    private static final String KEY_ASR_PPT = "1";
+    private static final String KEY_VAD_EOS = "800";
+    private static final String KEY_ASR_PPT = "0";
     private static final String KEY_AUDIO_FORMAT = "pcm";
     private static final String KEY_AUDIO_SOURCE = "-1";
 
@@ -56,8 +59,8 @@ public class IflytekAsrImpl implements AsrProvider {
 
     public static final String KEY_XUN_APP_ID = "APP_FLY_ID";
 
-        public String appId = "5924f7f4";
-//    public String appId = "598912bd";
+    public String appId = "5924f7f4";
+    //        public String appId = "598912bd";
     private String tempAppid = null;
     private Lock lock = new ReentrantLock();
 
@@ -149,6 +152,9 @@ public class IflytekAsrImpl implements AsrProvider {
      */
     public void setParam() {
         // 清空参数
+        if (mIat == null) {
+            return;
+        }
         mIat.setParameter(SpeechConstant.PARAMS, null);
 
         // 设置听写引擎
@@ -197,6 +203,19 @@ public class IflytekAsrImpl implements AsrProvider {
     @Override
     public String getAppId() {
         return appId;
+    }
+
+    @Override
+    public String getAsrInfo() {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(KEY_XUN_APP_ID, appId);
+            jsonObject.put("platDes", "讯飞");
+            jsonObject.put("platForm", getPlatform());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonObject.toString();
     }
 
     @Override
@@ -257,9 +276,9 @@ public class IflytekAsrImpl implements AsrProvider {
             if (mIat.isListening()) {
                 mIat.stopListening();
             }
-            SpeechUtility.getUtility().destroy();
             mIat.destroy();
             mIat = null;
+//            SpeechUtility.getUtility().destroy();
         } finally {
             lock.unlock();
         }

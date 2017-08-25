@@ -46,6 +46,9 @@ public interface AsrProvider {
     //appid
     String getAppId();
 
+    //获取Asr平台信息
+    String getAsrInfo();
+
 
     interface AsrResultListener {
         //识别成功的回调
